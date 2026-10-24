@@ -50,7 +50,7 @@ class AddScalar(TensorOp):
         return a + self.scalar
 
     def gradient(self, out_grad: Tensor, node: Tensor):
-        return out_grad
+        return (out_grad,)
 
 
 def add_scalar(a, scalar):
@@ -117,7 +117,9 @@ class PowerScalar(TensorOp):
     def gradient(self, out_grad, node):
         ### BEGIN YOUR SOLUTION
         lhs = node.inputs[0]
-        return multiply(out_grad, mul_scalar(power_scalar(lhs, self.scalar - 1), self.scalar))
+        return (
+            multiply(out_grad, mul_scalar(power_scalar(lhs, self.scalar - 1), self.scalar)),
+        )
         ### END YOUR SOLUTION
 
 
@@ -220,9 +222,9 @@ class BroadcastTo(TensorOp):
         ### BEGIN YOUR SOLUTION
         lhs = node.inputs[0]
 
-        axes = get_broadcast_axes(lhs.shape, self.shape)
+        axes = get_broadcast_axes(lhs.shape, self.shape)    
 
-        return (reshape(summation(reshape(out_grad, self.shape), axes=axes), lhs.shape), )
+        return (reshape(summation(out_grad, axes=axes), lhs.shape), )
         ### END YOUR SOLUTION
 
 
