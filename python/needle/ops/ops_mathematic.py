@@ -340,7 +340,7 @@ def exp(a):
 class ReLU(TensorOp):
     def compute(self, a):
         ### BEGIN YOUR SOLUTION
-        return array_api.maximum(a, 0)
+        return array_api.maximum(a, 0).reshape(a.shape)
         ### END YOUR SOLUTION
 
     def gradient(self, out_grad, node):
