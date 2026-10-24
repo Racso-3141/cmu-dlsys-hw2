@@ -120,7 +120,10 @@ class Sequential(Module):
 
     def forward(self, x: Tensor) -> Tensor:
         ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
+        output = x
+        for module in self.modules:
+            output = module(output)
+        return output
         ### END YOUR SOLUTION
 
 
