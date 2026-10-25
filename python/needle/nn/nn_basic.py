@@ -145,12 +145,31 @@ class BatchNorm1d(Module):
         self.eps = eps
         self.momentum = momentum
         ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
+        self.weight = Parameter(init.ones(dim, device=device, dtype=dtype, requires_grad=True))
+        self.bias = Parameter(init.zeros(dim, device=device, dtype=dtype, requires_grad=True))
+        self.running_mean = init.zeros(dim, device=device, dtype=dtype, requires_grad=False)
+        self.running_var = init.ones(dim, device=device, dtype=dtype, requires_grad=False)
         ### END YOUR SOLUTION
 
     def forward(self, x: Tensor) -> Tensor:
         ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
+        num_examples = x.shape[0]
+        mean = ops.summation(x, axes=(0, )) / num_examples
+        diff = x - mean.reshape((1, -1)).broadcast_to(x.shape)
+        var = ops.summation(diff ** 2, axes=(0,)) / num_examples
+
+        # running mean and variance
+        self.running_mean = self.running_mean * (1 - self.momentum) + mean * self.momentum
+        self.running_var = self.running_var * (1 - self.momentum) + var * self.momentum
+        
+        var = var + self.eps
+        std = var ** 0.5
+        std = std.reshape((1, -1)).broadcast_to(x.shape)
+
+        w = self.weight.reshape((1, -1)).broadcast_to(x.shape)
+        b = self.bias.reshape((1, -1)).broadcast_to(x.shape)
+
+        return diff / std * w + b
         ### END YOUR SOLUTION
 
 
@@ -167,9 +186,9 @@ class LayerNorm1d(Module):
 
     def forward(self, x: Tensor) -> Tensor:
         ### BEGIN YOUR SOLUTION
-        E_x = ops.summation(x, axes=(-1, )) / self.dim
-        E_x = E_x.reshape((-1, 1)).broadcast_to(x.shape)
-        diff = x - E_x
+        mean = ops.summation(x, axes=(-1, )) / self.dim
+        mean = mean.reshape((-1, 1)).broadcast_to(x.shape)
+        diff = x - mean
         
         var = ops.summation(diff ** 2, axes=(-1,)) / self.dim
         var = var + self.eps
