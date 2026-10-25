@@ -152,25 +152,44 @@ class BatchNorm1d(Module):
         ### END YOUR SOLUTION
 
     def forward(self, x: Tensor) -> Tensor:
-        ### BEGIN YOUR SOLUTION
-        num_examples = x.shape[0]
-        mean = ops.summation(x, axes=(0, )) / num_examples
-        diff = x - mean.reshape((1, -1)).broadcast_to(x.shape)
-        var = ops.summation(diff ** 2, axes=(0,)) / num_examples
+        w = self.weight.reshape((1, self.dim)).broadcast_to(x.shape)
+        b = self.bias.reshape((1, self.dim)).broadcast_to(x.shape)
 
-        # running mean and variance
-        self.running_mean = self.running_mean * (1 - self.momentum) + mean * self.momentum
-        self.running_var = self.running_var * (1 - self.momentum) + var * self.momentum
-        
-        var = var + self.eps
-        std = var ** 0.5
-        std = std.reshape((1, -1)).broadcast_to(x.shape)
+        if self.training:
+            num_examples = x.shape[0]
 
-        w = self.weight.reshape((1, -1)).broadcast_to(x.shape)
-        b = self.bias.reshape((1, -1)).broadcast_to(x.shape)
+            # Calculate batch mean
+            mean = ops.summation(x, axes=(0,)) / num_examples
 
-        return diff / std * w + b
-        ### END YOUR SOLUTION
+            # Calculate batch variance
+            diff = x - mean.reshape((1, self.dim)).broadcast_to(x.shape)
+            var = ops.summation(diff ** 2, axes=(0,)) / num_examples
+
+            # Update running statistics
+            self.running_mean = (
+                self.running_mean * (1 - self.momentum)
+                + mean.detach() * self.momentum
+            )
+
+            self.running_var = (
+                self.running_var * (1 - self.momentum)
+                + var.detach() * self.momentum
+            )
+
+        else:
+            # Use running statistics during evaluation
+            mean = self.running_mean
+            var = self.running_var
+
+        # Broadcast mean and variance
+        mean = mean.reshape((1, self.dim)).broadcast_to(x.shape)
+        var = var.reshape((1, self.dim)).broadcast_to(x.shape)
+
+        # Normalize
+        normalized = (x - mean) * ((var + self.eps) ** -0.5)
+
+        # Apply learnable scale and bias
+        return normalized * w + b
 
 
 
